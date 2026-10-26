@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haus des Döners - Digitale Speisekarte & QR Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-full flex flex-col antialiased items-center justify-start p-2 sm:p-6">
+
+    <!-- Top Navigation Bar for Admin Switch -->
+    <div id="adminNav" class="w-full max-w-md bg-slate-800 p-3 rounded-2xl mb-4 flex justify-between items-center shadow-lg border border-slate-700">
+        <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-xs text-slate-300 font-medium">Kunden-Ansicht aktiv</span>
+        </div>
+        <button onclick="requestAdminAccess()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl font-medium transition shadow-sm flex items-center">
+            <i class="fa-solid fa-gear mr-1.5"></i> Admin / QR Generator
+        </button>
+    </div>
+
+    <!-- Customer View (Default Mobile Menu) -->
+    <div id="customerView" class="w-full max-w-md bg-slate-50 text-slate-800 rounded-[32px] overflow-hidden flex flex-col shadow-2xl relative border-4 border-slate-800">
+        <!-- Header -->
+        <div class="bg-amber-700 text-white p-5 text-center sticky top-0 z-10 shadow-sm">
+            <h2 id="previewShopName" class="font-bold text-xl tracking-tight">Haus des Döners Braunschweig</h2>
+            <p id="previewShopTagline" class="text-xs text-amber-100 mt-0.5">Dein Döner Dein Genuss</p>
+        </div>
+
+        <!-- Google Business/Review Banner Button -->
+        <div class="p-3 bg-white border-b border-slate-100">
+            <a href="https://www.google.com/search?hl=tr-DE&gl=de&q=Haus+des+Döners+Braunschweig,+Bohlweg+13,+38100+Braunschweig&ludocid=3981493985997558904&lsig=AB86z5VO_jr7aAU8Env29L6ruQbs#lrd=0x47aff5c1683c8d99:0x37411baf76bd1478,3" 
+               target="_blank" 
+               class="flex items-center justify-between bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md">
+                <div class="flex items-center space-x-2.5">
+                    <i class="fa-brands fa-google text-base"></i>
+                    <span>Google Bewertung & Route</span>
+                </div>
+                <div class="flex items-center text-amber-300 text-[10px] space-x-0.5">
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-chevron-right text-white ml-1 text-xs"></i>
+                </div>
+            </a>
+        </div>
+
+        <!-- Category Pills -->
+        <div id="categoryPills" class="flex space-x-2 p-3 bg-white border-b border-slate-100 overflow-x-auto text-xs shrink-0">
+            <!-- Populated via JS -->
+        </div>
+
+        <!-- Menu List Container -->
+        <div id="previewMenuList" class="p-4 space-y-3 flex-1 overflow-y-auto max-h-[500px]">
+            <!-- Items populated via JS -->
+        </div>
+
+        <!-- Footer Note with Secondary Google Link -->
+        <div class="p-4 text-center bg-slate-100 text-[11px] text-slate-500 border-t border-slate-200 space-y-2">
+            <div>Guten Appetit! Unser Geheimnis liegt in den Berliner Saucen.</div>
+            <div>
+                <a href="https://www.google.com/search?hl=tr-DE&gl=de&q=Haus+des+Döners+Braunschweig,+Bohlweg+13,+38100+Braunschweig&ludocid=3981493985997558904&lsig=AB86z5VO_jr7aAU8Env29L6ruQbs#lrd=0x47aff5c1683c8d99:0x37411baf76bd1478,3" 
+                   target="_blank" 
+                   class="text-blue-600 hover:underline font-medium inline-flex items-center gap-1">
+                    <i class="fa-brands fa-google text-xs"></i> Bei Google bewerten
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel / QR Generator View (Hidden by default) -->
+    <div id="adminView" class="hidden w-full max-w-2xl bg-white text-slate-800 p-6 rounded-3xl shadow-2xl space-y-6 my-2 border border-slate-200">
+        <div class="flex justify-between items-center border-b pb-4">
+            <div class="flex items-center space-x-2">
+                <div class="bg-amber-100 p-2 rounded-xl text-amber-800">
+                    <i class="fa-solid fa-qrcode text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">QR-Code & Menü Verwaltung</h2>
+                    <p class="text-xs text-slate-500">Passen Sie Ihre Live-Speisekarte und Kategorien an</p>
+                </div>
+            </div>
+            <button onclick="toggleAdminPanel()" class="text-xs bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl font-medium transition flex items-center">
+                <i class="fa-solid fa-mobile-screen mr-1.5"></i> Zum Menü
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Settings Form -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Restaurant Name</label>
+                    <input type="text" id="shopNameInput" value="Haus des Döners Braunschweig" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" oninput="updateMenuPreview()">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Untertitel / Slogan</label>
+                    <input type="text" id="shopTaglineInput" value="Dein Döner Dein Genuss" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" oninput="updateMenuPreview()">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Ziel-Link für QR-Code (URL)</label>
+                    <input type="text" id="menuUrlInput" class="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-slate-600 text-xs" placeholder="https://mein-restaurant.de/menu.html" oninput="generateQRCode()">
+                    <p class="text-[10px] text-slate-400 mt-1">Geben Sie hier die echte Web-Adresse ein, sobald das Menü online gehostet wird.</p>
+                </div>
+            </div>
+
+            <!-- QR Display Box -->
+            <div class="bg-amber-50 p-5 rounded-2xl border border-amber-200 flex flex-col items-center justify-center text-center space-y-3">
+                <div id="qrcode" class="bg-white p-3 rounded-xl shadow-inner"></div>
+                <button onclick="downloadQR()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-medium transition shadow-sm flex items-center">
+                    <i class="fa-solid fa-download mr-1.5"></i> QR-Code Herunterladen (PNG)
+                </button>
+            </div>
+        </div>
+
+        <!-- NEW: Category Manager Section -->
+        <div class="border-t pt-4 space-y-3">
+            <h3 class="text-sm font-bold text-slate-900">Kategorien Verwalten</h3>
+            <div class="flex gap-2">
+                <input type="text" id="newCategoryInput" placeholder="Neue Kategorie (z.B. Desserts)" class="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                <button onclick="addNewCategory()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shadow-sm">
+                    + Kategorie Hinzufügen
+                </button>
+            </div>
+            <div id="categoryTagsList" class="flex flex-wrap gap-1.5 pt-1"></div>
+        </div>
+
+        <!-- Editable Menu Items -->
+        <div class="border-t pt-4 space-y-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold text-slate-900">Speisekarte Einträge verwalten</h3>
+                <div class="flex space-x-2">
+                    <button onclick="resetToDefaultMenu()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold px-3 py-1.5 rounded-xl transition" title="Zurücksetzen">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> Standard
+                    </button>
+                    <button onclick="addMenuItem()" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold px-3 py-1.5 rounded-xl border border-amber-200 transition">
+                        + Gericht Hinzufügen
+                    </button>
+                </div>
+            </div>
+            <div id="editableItemsList" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div>
+        </div>
+    </div>
+
+    <!-- Password Modal for Admin Access -->
+    <div id="passwordModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white text-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4 border border-slate-200">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-100 p-3 rounded-2xl text-amber-800">
+                    <i class="fa-solid fa-lock text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base">Admin-Zugang</h3>
+                    <p class="text-xs text-slate-500">Bitte geben Sie das Passwort ein (Standard: admin123)</p>
+                </div>
+            </div>
+            <div>
+                <input type="password" id="adminPasswordInput" placeholder="Passwort eingeben..." class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" onkeydown="if(event.key === 'Enter') verifyAdminPassword()">
+                <p id="passwordError" class="text-xs text-rose-500 mt-1.5 hidden font-medium">Falsches Passwort!</p>
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button onclick="closePasswordModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">Abbrechen</button>
+                <button onclick="verifyAdminPassword()" class="w-1/2 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold transition shadow-sm">Anmelden</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const defaultCategories = ["Döner & Wraps", "Tellergerichte", "Lahmacun", "Veggie Style", "Extras & Saucen", "Soft Drinks"];
+        
+        const defaultMenuItems = [
+            { id: 1, name: "Döner Kalb (Normal)", desc: "Mit zartem Kalbfleisch, frischem Salat und Berliner Saucen", price: "8,50 €", category: "Döner & Wraps" },
+            { id: 2, name: "Döner Hähnchen (Normal)", desc: "Mit saftigem Hähnchenfleisch, frischem Salat und Berliner Saucen", price: "8,50 €", category: "Döner & Wraps" },
+            { id: 3, name: "Döner Steak (Normal)", desc: "Mit hochwertigem Steakfleisch, frischem Salat und Berliner Saucen", price: "10,50 €", category: "Döner & Wraps" },
+            { id: 4, name: "Big Döner Kalb / Hähnchen", desc: "Extra viel Fleisch im großen Fladenbrot mit Salat & Saucen", price: "9,50 €", category: "Döner & Wraps" },
+            { id: 5, name: "Big Döner Steak", desc: "Extra viel Steakfleisch im großen Fladenbrot", price: "11,50 €", category: "Döner & Wraps" },
+            { id: 6, name: "Wrap / Dürüm", desc: "Im weichen Dürüm-Fladenbrot mit Salat & Saucen (Kalb/Hähnchen)", price: "9,50 €", category: "Döner & Wraps" },
+            { id: 7, name: "Wrap Steak", desc: "Im weichen Dürüm-Fladenbrot mit Steakfleisch", price: "11,50 €", category: "Döner & Wraps" },
+            { id: 8, name: "Döner Teller Kalb / Hähnchen", desc: "Mit Fleisch nach Wahl, Pommes oder Reis, Salat und Saucen", price: "13,50 €", category: "Tellergerichte" },
+            { id: 9, name: "Döner Teller Steak", desc: "Mit zartem Steakfleisch, Pommes oder Reis, Salat und Saucen", price: "15,50 €", category: "Tellergerichte" },
+            { id: 10, name: "İskender Teller", desc: "Mit Fladenbrotstückchen, Butter, Tomatensauce, Joghurt & Fleisch", price: "14,50 €", category: "Tellergerichte" },
+            { id: 11, name: "Lahmacun (Klassisch)", desc: "Knuspriger Lahmacun mit feinem Hackfleisch und Salat", price: "6,00 €", category: "Lahmacun" },
+            { id: 12, name: "Lahmacun mit Dönerfleisch", desc: "Knuspriger Lahmacun gefüllt mit Dönerfleisch und Salat", price: "10,50 €", category: "Lahmacun" },
+            { id: 13, name: "Pommes Frites", desc: "Knusprig frittierte Pommes", price: "5,00 €", category: "Extras & Saucen" },
+            { id: 14, name: "Halloumi im Brot", desc: "Mit gegrilltem Halloumi-Käse, Salat & Saucen", price: "7,00 €", category: "Veggie Style" },
+            { id: 15, name: "Falafel Sandwich", desc: "Mit knusprigen Falafeln, Salat & Saucen", price: "7,50 €", category: "Veggie Style" },
+            { id: 16, name: "Falafel Wrap", desc: "Im Dürüm mit Falafel, Salat & Saucen", price: "8,50 €", category: "Veggie Style" },
+            { id: 17, name: "Salattasche", desc: "Frischer Salat im Brot mit Saucen", price: "5,50 €", category: "Veggie Style" },
+            { id: 18, name: "Gemischter Salat", desc: "Frische große Salatschüssel", price: "6,50 €", category: "Veggie Style" },
+            { id: 19, name: "Soft Drinks (0,33l / 0,5l)", desc: "Verschiedene erfrischende Getränke", price: "2,80 €", category: "Soft Drinks" },
+            { id: 20, name: "Ayran", desc: "Erfrischendes Joghurtgetränk", price: "2,00 €", category: "Soft Drinks" }
+        ];
+
+        let menuItems = [];
+        let categories = [];
+        let currentCategory = "Alle";
+        let qrInstance = null;
+        let isAdminLoggedIn = false;
+        const ADMIN_PASSWORD = "Hafsa.2013."; 
+
+        window.onload = function() {
+            // Menüleri yükle
+            const savedMenu = localStorage.getItem('doner_menu_items');
+            if (savedMenu) {
+                try {
+                    menuItems = JSON.parse(savedMenu);
+                } catch(e) {
+                    menuItems = [...defaultMenuItems];
+                }
+            } else {
+                menuItems = [...defaultMenuItems];
+            }
+
+            // Kategorileri yükle (Kaydedilmiş yoksa varsayılanları al)
+            const savedCategories = localStorage.getItem('doner_categories');
+            if (savedCategories) {
+                try {
+                    categories = JSON.parse(savedCategories);
+                } catch(e) {
+                    categories = [...defaultCategories];
+                }
+            } else {
+                categories = [...defaultCategories];
+            }
+
+            // Restoran adı ve sloganını yükle
+            const savedShopName = localStorage.getItem('doner_shop_name');
+            const savedShopTagline = localStorage.getItem('doner_shop_tagline');
+            
+            if (savedShopName) {
+                document.getElementById('shopNameInput').value = savedShopName;
+            }
+            if (savedShopTagline) {
+                document.getElementById('shopTaglineInput').value = savedShopTagline;
+            }
+
+            const cleanUrl = window.location.href.split('#')[0];
+            document.getElementById('menuUrlInput').value = cleanUrl;
+
+            updateMenuPreview();
+            renderCategories();
+            renderCategoryTags();
+            renderMenuLists();
+            renderEditableItems();
+            generateQRCode();
+        };
+
+        function saveDataToStorage() {
+            localStorage.setItem('doner_menu_items', JSON.stringify(menuItems));
+            localStorage.setItem('doner_categories', JSON.stringify(categories));
+        }
+
+        function requestAdminAccess() {
+            if (isAdminLoggedIn) {
+                toggleAdminPanel();
+            } else {
+                document.getElementById('adminPasswordInput').value = "";
+                document.getElementById('passwordError').classList.add('hidden');
+                document.getElementById('passwordModal').classList.remove('hidden');
+                document.getElementById('adminPasswordInput').focus();
+            }
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.add('hidden');
+        }
+
+        function verifyAdminPassword() {
+            const enteredPass = document.getElementById('adminPasswordInput').value;
+            if (enteredPass === ADMIN_PASSWORD) {
+                isAdminLoggedIn = true;
+                closePasswordModal();
+                toggleAdminPanel();
+            } else {
+                document.getElementById('passwordError').classList.remove('hidden');
+            }
+        }
+
+        function toggleAdminPanel() {
+            const customerView = document.getElementById('customerView');
+            const adminView = document.getElementById('adminView');
+            const adminNav = document.getElementById('adminNav');
+
+            if (customerView.classList.contains('hidden')) {
+                customerView.classList.remove('hidden');
+                adminView.classList.add('hidden');
+                adminNav.classList.remove('hidden');
+            } else {
+                customerView.classList.add('hidden');
+                adminView.classList.remove('hidden');
+                adminNav.classList.add('hidden');
+            }
+        }
+
+        function generateQRCode() {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = "";
+            const url = document.getElementById('menuUrlInput').value || window.location.href;
+
+            qrInstance = new QRCode(qrContainer, {
+                text: url,
+                width: 150,
+                height: 150,
+                colorDark: "#1e293b",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        function updateMenuPreview() {
+            const shopName = document.getElementById('shopNameInput').value;
+            const shopTagline = document.getElementById('shopTaglineInput').value;
+            document.getElementById('previewShopName').innerText = shopName;
+            document.getElementById('previewShopTagline').innerText = shopTagline;
+
+            localStorage.setItem('doner_shop_name', shopName);
+            localStorage.setItem('doner_shop_tagline', shopTagline);
+        }
+
+        // Müşteri ekranındaki üst kategori filtreleri
+        function renderCategories() {
+            const container = document.getElementById('categoryPills');
+            let html = "";
+            
+            const allCats = ["Alle", ...categories];
+            allCats.forEach(cat => {
+                const isActive = cat === currentCategory;
+                const cssClass = isActive 
+                    ? "bg-amber-700 text-white px-3 py-1 rounded-full font-medium shrink-0 cursor-pointer shadow-sm" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1 rounded-full font-medium shrink-0 cursor-pointer transition";
+                
+                html += `<span onclick="filterCategory('${cat}')" class="${cssClass}">${cat}</span>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Admin panelindeki kategori etiketleri yönetimi
+        function renderCategoryTags() {
+            const container = document.getElementById('categoryTagsList');
+            let html = "";
+            categories.forEach((cat, index) => {
+                html += `
+                    <span class="inline-flex items-center bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-lg border border-slate-200 font-medium">
+                        ${cat}
+                        <button onclick="removeCategory(${index})" class="ml-1.5 text-slate-400 hover:text-rose-600">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function addNewCategory() {
+            const input = document.getElementById('newCategoryInput');
+            const val = input.value.trim();
+            if (val && !categories.includes(val)) {
+                categories.push(val);
+                input.value = "";
+                saveDataToStorage();
+                renderCategories();
+                renderCategoryTags();
+                renderEditableItems();
+            } else if (categories.includes(val)) {
+                alert("Diese Kategorie existiert bereits!");
+            }
+        }
+
+        function removeCategory(index) {
+            const catToDelete = categories[index];
+            const hasItems = menuItems.some(item => item.category === catToDelete);
+            if (hasItems) {
+                if (!confirm(`Die Kategorie "${catToDelete}" enthält noch Gerichte. Möchten Sie sie wirklich löschen?`)) {
+                    return;
+                }
+            }
+            categories.splice(index, 1);
+            if (currentCategory === catToDelete) {
+                currentCategory = "Alle";
+            }
+            saveDataToStorage();
+            renderCategories();
+            renderCategoryTags();
+            renderMenuLists();
+            renderEditableItems();
+        }
+
+        function filterCategory(cat) {
+            currentCategory = cat;
+            renderCategories();
+            renderMenuLists();
+        }
+
+        function renderMenuLists() {
+            const container = document.getElementById('previewMenuList');
+            let html = "";
+
+            const filteredItems = currentCategory === "Alle" 
+                ? menuItems 
+                : menuItems.filter(item => item.category === currentCategory);
+
+            if (filteredItems.length === 0) {
+                html = `<div class="text-center py-8 text-slate-400 text-xs">Keine Gerichte in dieser Kategorie gefunden.</div>`;
+            } else {
+                filteredItems.forEach(item => {
+                    html += `
+                        <div class="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center">
+                            <div class="space-y-0.5">
+                                <span class="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md font-medium">${item.category}</span>
+                                <h4 class="font-bold text-slate-800 text-xs sm:text-sm mt-1">${item.name}</h4>
+                                <p class="text-[11px] text-slate-500">${item.desc}</p>
+                            </div>
+                            <div class="text-right shrink-0 pl-2">
+                                <span class="font-bold text-amber-800 text-xs sm:text-sm">${item.price}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            container.innerHTML = html;
+        }
+
+        function renderEditableItems() {
+            const container = document.getElementById('editableItemsList');
+            let html = "";
+            menuItems.forEach((item, index) => {
+                let categoryOptions = "";
+                categories.forEach(cat => {
+                    const selected = item.category === cat ? 'selected' : '';
+                    categoryOptions += `<option value="${cat}" ${selected}>${cat}</option>`;
+                });
+
+                html += `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-2 items-center justify-between">
+                        <div class="flex-1 w-full space-y-1.5">
+                            <div class="flex gap-2">
+                                <input type="text" value="${item.name}" oninput="updateItemProp(${index}, 'name', this.value)" class="w-1/2 px-2.5 py-1 text-xs border border-slate-200 rounded-lg bg-white" placeholder="Name">
+                                <select onchange="updateItemProp(${index}, 'category', this.value)" class="w-1/4 px-2 py-1 text-xs border border-slate-200 rounded-lg bg-white font-medium text-amber-900">
+                                    ${categoryOptions}
+                                </select>
+                                <input type="text" value="${item.price}" oninput="updateItemProp(${index}, 'price', this.value)" class="w-1/4 px-2.5 py-1 text-xs border border-slate-200 rounded-lg bg-white" placeholder="Preis">
+                            </div>
+                            <input type="text" value="${item.desc}" oninput="updateItemProp(${index}, 'desc', this.value)" class="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg bg-white" placeholder="Beschreibung">
+                        </div>
+                        <button onclick="removeMenuItem(${index})" class="text-rose-500 hover:text-rose-700 p-2 text-xs transition" title="Löschen">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function updateItemProp(index, prop, value) {
+            menuItems[index][prop] = value;
+            saveDataToStorage();
+            renderMenuLists();
+        }
+
+        function addMenuItem() {
+            const defaultCat = categories.length > 0 ? categories[0] : "Allgemein";
+            menuItems.push({ id: Date.now(), name: "Neues Gericht", desc: "Frisch zubereitet", category: defaultCat, price: "8,50 €" });
+            saveDataToStorage();
+            renderEditableItems();
+            renderMenuLists();
+        }
+
+        function removeMenuItem(index) {
+            menuItems.splice(index, 1);
+            saveDataToStorage();
+            renderEditableItems();
+            renderMenuLists();
+        }
+
+        function resetToDefaultMenu() {
+            if (confirm("Möchten Sie die Speisekarte und Kategorien wirklich auf die Standardeinstellungen zurücksetzen?")) {
+                menuItems = [...defaultMenuItems];
+                categories = [...defaultCategories];
+                saveDataToStorage();
+                renderCategoryTags();
+                renderCategories();
+                renderEditableItems();
+                renderMenuLists();
+            }
+        }
+
+        function downloadQR() {
+            const qrCanvas = document.querySelector('#qrcode canvas');
+            const qrImg = document.querySelector('#qrcode img');
+            if (qrCanvas) {
+                const link = document.createElement('a');
+                link.download = 'haus-des-doners-qr.png';
+                link.href = qrCanvas.toDataURL("image/png");
+                link.click();
+            } else if (qrImg && qrImg.src) {
+                const link = document.createElement('a');
+                link.download = 'haus-des-doners-qr.png';
+                link.href = qrImg.src;
+                link.target = '_blank';
+                link.click();
+            } else {
+                alert("QR-Code konnte nicht heruntergeladen werden.");
+            }
+        }
+    </script>
+</body>
+</html>
